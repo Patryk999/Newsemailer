@@ -94,7 +94,7 @@ def sendemail(news, weather):
     )
     server.close()
 
-def shownewsdetails(news, weather):
+"""def shownewsdetails(news, weather):
     newsURL = "https://warszawa.wyborcza.pl/warszawa/0,54420.html"
     for x in weather:
         print(x)
@@ -107,9 +107,9 @@ def shownewsdetails(news, weather):
     driver.get(newsURL)
     elem1 = driver.find_element_by_link_text(news[najciekawszyartykul - 1])
     elem1.click()
-
+"""
 
 weather = getweather()
 news = getnewsheaders()
 sendemail(news,weather)
-shownewsdetails(news,weather)
+#shownewsdetails(news,weather)
