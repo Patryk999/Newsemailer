@@ -1,6 +1,13 @@
+"""
+Newsemailer sends email with local news and weather for the day,
+this version is designed to send information from Warsaw, it can be
+redesigned to other cities/countries.
+
+before running enter your email at "EMAIL" section and 16 digit gmail password at "PASSWORD"
+"""
+
 import requests
 from bs4 import BeautifulSoup
-from selenium import webdriver
 import smtplib
 from email.message import EmailMessage
 
@@ -25,15 +32,33 @@ def getweather():
 
     temp = temp[1:]
     for x in timeofweatheroftheday:
-        time.append(x.get_text().strip())
+        if x.get_text().strip()[-1] == "0":
+            time.append(x.get_text().strip())
 
     temp = temp[:10]
     time = time[:10]
     output = []
     for x in range(len(time)):
-        output.append("O godzinie {} bedzie {} stopni Celsjusza".format(time[x],temp[x]))
+        output.append("At {} there will be {} degrees celsius.".format(time[x],temp[x]))
 
     return output
+
+def getlinks(news):
+    links = []
+
+    for x in news:
+        i = 0
+        while i < len(str(x)):
+            if str(x)[i-8:i] == "a href=\"":
+                tempstring = ""
+                while str(x)[i] is not "\"":
+                    tempstring = tempstring + str(x)[i]
+                    i += 1
+                if tempstring not in links:
+                    links.append(tempstring)
+            else:
+                i += 1
+    return links
 
 def getnewsheaders():
     newsURL = "https://warszawa.wyborcza.pl/warszawa/0,54420.html"
@@ -41,15 +66,29 @@ def getnewsheaders():
 
     newslink = requests.get(newsURL, headers=headers)
 
-    soup = BeautifulSoup(newslink.content, features = 'html.parser')
+    soup = BeautifulSoup(newslink.content, features='html.parser')
 
     newsodd = soup.findAll("li", class_="entry even article")
     newseven = soup.findAll("li", class_="entry odd article")
 
-    i = 0
-    j = 0
+    linksodd = getlinks(newsodd)
+    linkseven = getlinks(newseven)
+
+    i = j = 0
+    linksoddpluseven = []
+
+    while i < len(linksodd) or j < len(linkseven):
+        if i > j:
+            linksoddpluseven.append(linkseven[j])
+            j += 1
+        else:
+            linksoddpluseven.append(linksodd[i])
+            i += 1
+
+    i = j = 0
     newsoddpluseven = []
-    while i < len(newsodd) and j < len(newseven):
+
+    while i < len(newsodd) or j < len(newseven):
         if i > j:
             newsoddpluseven.append(newseven[j].get_text().strip())
             j += 1
@@ -65,27 +104,45 @@ def getnewsheaders():
                 newsheaders.append(x[:y])
                 break
 
-    return newsheaders
+    return newsheaders, linksoddpluseven
 
-def sendemail(news, weather):
-    server = smtplib.SMTP("smtp.gmail.com",587)
+def sendemail(news,links, weather):
+    server = smtplib.SMTP("smtp.gmail.com", 587)
     server.ehlo()
     server.starttls()
     server.ehlo()
-    server.login('patryk.saffer99@gmail.com',"vxyqiiebahkpokan")
+    server.login("EMAIL", "PASSWORD")
 
-    news = "\n".join(news)
+    i = j = 0
+    newspluslinks = []
+
+    if len(news) != len(links):
+        if len(news) > len(links):
+            raise ValueError("Not every news has link")
+        else:
+            raise ValueError("Too many links for news")
+        return
+
+    while i < len(news) or j < len(links):
+        if i > j:
+            newspluslinks.append(links[j])
+            j += 1
+        else:
+            newspluslinks.append(news[i])
+            i += 1
+
+    news = "\n".join(newspluslinks)
     weather = "\n".join(weather)
 
     msg = EmailMessage()
 
-    subject = "Poranny Raport"
-    body = "Pogoda:\n{}\n\nNewsy:\n{}".format(weather, news)
+    subject = "Morning Raport"
+    body = "Weather:\n{}\n\nNews:\n{}".format(weather, news)
 
     msg.set_content(body)
     msg['Subject'] = subject
-    msg['From'] ="patryk.saffer99@gmail.com"
-    msg['To'] = "patryk.saffer99@gmail.com"
+    msg['From'] = "EMAIL"
+    msg['To'] = "EMAIL"
 
     server.sendmail(
         msg['From'],
@@ -94,22 +151,10 @@ def sendemail(news, weather):
     )
     server.close()
 
-"""def shownewsdetails(news, weather):
-    newsURL = "https://warszawa.wyborcza.pl/warszawa/0,54420.html"
-    for x in weather:
-        print(x)
+def main():
+    weather = getweather()
+    news, links = getnewsheaders()
+    sendemail(news, links, weather)
 
-    for x in range(len(news)):
-        print("Artykul nr {}: {}".format(x + 1, news[x]))
-
-    najciekawszyartykul = int(input())
-    driver = webdriver.Firefox()
-    driver.get(newsURL)
-    elem1 = driver.find_element_by_link_text(news[najciekawszyartykul - 1])
-    elem1.click()
-"""
-
-weather = getweather()
-news = getnewsheaders()
-sendemail(news,weather)
-#shownewsdetails(news,weather)
+if __name__ == "__main__":
+    main()
