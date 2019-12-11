@@ -111,7 +111,7 @@ def sendemail(news,links, weather):
     server.ehlo()
     server.starttls()
     server.ehlo()
-    server.login("EMAIL", "PASSWORD")
+    server.login("patryk.saffer99@gmail.com", "111")
 
     i = j = 0
     newspluslinks = []
@@ -141,13 +141,14 @@ def sendemail(news,links, weather):
 
     msg.set_content(body)
     msg['Subject'] = subject
-    msg['From'] = "EMAIL"
-    msg['To'] = "EMAIL"
+    msg['From'] = "patryk.saffer99@gmail.com"
+    msg['To'] = "patryk.saffer99@gmail.com"
 
     server.sendmail(
         msg['From'],
         msg['To'],
         msg.as_string()
+
     )
     server.close()
 
